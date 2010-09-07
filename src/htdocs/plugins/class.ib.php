@@ -30,8 +30,35 @@ require_once('class.bank.account.php');
 
 class IB
 {
-  public function __construct()
+  private $_name;
+
+  public function __construct($name)
   {
+    $this->_name = $name;
+  }
+
+  function curlExec($ch)
+  {
+    $user_agent = Config::getValue('ib.' . $this->_name, 'user.agent');
+    $cookie_file = Config::getValue('ib.' . $this->_name, 'cookie.file');
+
+    $debug_file = CONFIG::getValue('curl', 'debug.file');
+
+    fopen($fp, $debug_file, 'a+');
+
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+    curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie_file);
+    curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie_file);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_STDERR, $fp);
+    $result = curl_exec($ch);
+    curl_close($ch);
+
+    fclose($fp);
+
+    return $result;
   }
 }
 ?>

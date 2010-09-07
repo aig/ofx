@@ -51,8 +51,8 @@ $ib = new IB_AVANGARD();
 if ($ofx->bank_msgs_rq_v1()->isValid()) {
   if ($ofx->bank_msgs_rq_v1()->stmt_trn_rq()->isValid()) {
     $ib->login($user, $fish);
-    $balance = $ib->getAccountBalance($ofx->bank_msgs_rq_v1()->stmt_trn_rq()->stmt_rq()->bankacctfrom()->acctid());
-    $response = responseAccountBalance($ofx, $balance);
+    $info = $ib->getAccountBalance($ofx->bank_msgs_rq_v1()->stmt_trn_rq()->stmt_rq()->bankacctfrom()->acctid());
+    $response = responseAccountBalance($ofx, $info, $ofx->bank_msgs_rq_v1()->stmt_trn_rq()->stmt_rq()->inctran()->dtstart());
   }
 } elseif ($ofx->signup_msgs_rq_v1()->isValid()) {
   $ib->login($user, $fish);
@@ -64,7 +64,9 @@ echo $response;
 fwrite($fh, $response);
 fclose($fh);
 
-function responseAccountBalance($ofx, $balance) {
+function responseAccountBalance($ofx, $info) {
+  $balance = $info['balance'];
+
   $system_time = strftime("%Y%m%d%H%M%S");
   $balance_time = strftime("%Y%m%d%H%M");
   $account_id = $ofx->bank_msgs_rq_v1()->stmt_trn_rq()->stmt_rq()->bankacctfrom()->acctid();

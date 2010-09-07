@@ -31,6 +31,7 @@ class IB_AVANGARD extends IB
   private $_main_page;
 
   function __construct() {
+    parent::__construct("avangard");
     $this->_account_list = null;
   }
 
@@ -68,30 +69,20 @@ class IB_AVANGARD extends IB
     return false;
   }
 
-  public function getAccountBalance($account_id) {
+  public function getAccountBalance($account_id, $inctran = false) {
     if (!preg_match('/' . $account_id . '.*?"Детальная информация по счету".*?submitForm\(\'f\'\,1\,\{source:\'(.*?)\'\}\).*?"Выписка по счету"/', $this->_main_page, $action_match)) {
       throw Exception("Unknown bank account: $account_id");
     }
 
     $source = $action_match[1];
 
-    $user_agent = Config::getValue('ib.avangard', 'user.agent');
-    $cookie_file = Config::getValue('ib.avangard', 'cookie.file');
-
     $state_token = $this->getStateToken($this->_main_page);
 
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, "https://www.avangard.ru/ibAvn/faces/pages/accounts/all_acc.jspx");
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, "oracle.adf.faces.FORM=f&oracle.adf.faces.STATE_TOKEN=$state_token&source=" . urlencode($source));
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-    curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie_file);
-    curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie_file);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    $result = curl_exec($ch);
-    curl_close($ch);
+    $result = $this->curlExec($ch);
 
     $page  = iconv('cp1251', 'utf-8', html_entity_decode($result, ENT_COMPAT, 'cp1251'));
 
@@ -99,9 +90,43 @@ class IB_AVANGARD extends IB
       return false;
     }
 
-    $balance = preg_replace("/\s/", '', $balance_match[1]);
+    $info = array();
 
-    return $balance;
+    $info['balance'] = preg_replace("/\s/", '', $balance_match[1]);
+
+    if (!$inctran) {
+      return $info;
+    }
+
+    $start_date = strftime('%d.%m.%Y', strtotime("$inctran"));
+
+    if (!preg_match('/name="f:finishdate" value="(\d+\.\d+\.\d+)"/', $page, $match)) {
+      return false;
+    }
+
+    $finish_date = $match[1];
+
+    $state_token = $this->getStateToken($page);
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, "https://www.avangard.ru/ibAvn/faces/pages/accounts/acc_stat.jspx");
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, "f%3Astartdate=$start_date&"
+                                        ."f%3Afinishdate=$finish_date&"
+                                        ."f%3AleftAccTbl%3Aselected=0&"
+                                        ."f%3AleftAccTbl%3ArangeStart=0&"
+                                        ."f%3AleftCardTbl%3A_us=0&"
+                                        ."f%3AleftCardTbl%3A_us=1&"
+                                        ."f%3AleftCardTbl%3ArangeStart=0&"
+                                        ."oracle.adf.faces.FORM=f&oracle.adf.faces.STATE_TOKEN=$state_token&"
+                                        ."source=f%3A_id202&"
+                                        ."event=&"
+                                        ."f%3AleftCardTbl%3A_sm=");
+    $result = $this->curlExec($ch);
+
+    $page  = iconv('cp1251', 'utf-8', html_entity_decode($result, ENT_COMPAT, 'cp1251'));
+
+    return $info;
   }
 
   function getAccountList() {
@@ -110,20 +135,8 @@ class IB_AVANGARD extends IB
 
   private function curlLogin($user, $fish) {
     $ch = curl_init();
-
-    $user_agent = Config::getValue('ib.avangard', 'user.agent');
-    $cookie_file = Config::getValue('ib.avangard', 'cookie.file');
-
     curl_setopt($ch, CURLOPT_URL, "http://www.avangard.ru/rus/index.wbp");
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-    curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie_file);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-
-    $result = curl_exec($ch);
-    
-    curl_close($ch);
+    $result = $this->curlExec($ch);
 
     if (!preg_match('/<INPUT\s+value="login"\s+name="([^\"]+)"/i', $result, $match)) {
       return false;
@@ -134,38 +147,24 @@ class IB_AVANGARD extends IB
     $password = decryptPassword($user, CONFIG::getValue('ib.avangard', 'user.password'), $fish);
 
     $ch = curl_init();
-
     curl_setopt($ch, CURLOPT_URL, "https://www.avangard.ru/client4/afterlogin");
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
     curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, "$login_name=login&65783213-C4EC-46C3-AEF5-172B7C75C400.redirect=%2Frus%2Findex.wbp&login_v=&login=$user&passwd_v=&passwd=$password&x=20&y=7");
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-    curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie_file);
-    curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie_file);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-
-    $result = curl_exec($ch);
-
-    curl_close($ch);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, "$login_name=login&"
+                                        ."65783213-C4EC-46C3-AEF5-172B7C75C400.redirect=%2Frus%2Findex.wbp&"
+                                        ."login_v=&"
+                                        ."login=$user&"
+                                        ."passwd_v=&"
+                                        ."passwd=$password&"
+                                        ."x=20&y=7");
+    $result = $this->curlExec($ch);
 
     return $result;
   }
 
   private function curlMain($url) {
     $ch = curl_init();
-
     curl_setopt($ch, CURLOPT_URL, "https://www.avangard.ru/ibAvn/" . $url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($ch, CURLOPT_USERAGENT, Config::getValue('ib.avangard', 'user.agent'));
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-    curl_setopt($ch, CURLOPT_COOKIEJAR, Config::getValue('ib.avangard', 'cookie.file'));
-    curl_setopt($ch, CURLOPT_COOKIEFILE, Config::getValue('ib.avangard', 'cookie.file'));
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-
-    $result = curl_exec($ch);
-
-    curl_close($ch);
+    $result = $this->curlExec($ch);
 
     return $result;
   }
