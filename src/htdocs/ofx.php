@@ -78,52 +78,37 @@ function responseAccountBalance($ofx, $info) {
 
   $currency = Config::getValue('currency', "code.$currency_code");
 
-  $message = "<OFX>
-<SIGNONMSGSRSV1>
-<SONRS>
-<STATUS>
-<CODE>0</CODE>
-<SEVERITY>INFO</SEVERITY>
-</STATUS>
-<DTSERVER>$system_time</DTSERVER>
-<LANGUAGE>ENG</LANGUAGE>
-<DTPROFUP>$system_time</DTPROFUP>
-<DTACCTUP>$system_time</DTACCTUP>
-<FI>
-<ORG>$org</ORG>
-<FID>$org</FID>
-</FI>
-</SONRS>
-</SIGNONMSGSRSV1>
+  $xml = DOMDocument::load('templates/account.balance.xml');
 
-<BANKMSGSRSV1>
-<STMTTRNRS>
-<TRNUID>1001</TRNUID>
-<STATUS>
-<CODE>0</CODE>
-<SEVERITY>INFO</SEVERITY>
-</STATUS>
-<STMTRS>
-<CURDEF>$currency</CURDEF>
-<BANKACCTFROM>
-<BANKID>$org</BANKID>
-<ACCTID>$account_id</ACCTID>
-<ACCTTYPE>CHECKING</ACCTTYPE>
-</BANKACCTFROM>
-<LEDGERBAL>
-<BALAMT>$balance</BALAMT>
-<DTASOF>$balance_time</DTASOF>
-</LEDGERBAL>
-<AVAILBAL>
-<BALAMT>$balance</BALAMT>
-<DTASOF>$balance_time</DTASOF>
-</AVAILBAL>
-</STMTRS>
-</STMTTRNRS>
-</BANKMSGSRSV1>
-</OFX>";
+  $xml->formatOutput = true;
 
-  return $message;
+  $sonrs = $xml->documentElement->getElementsByTagName('SONRS')->item(0);
+
+  $sonrs->getElementsByTagName('CODE')->item(0)->nodeValue = 0;
+  $sonrs->getElementsByTagName('SEVERITY')->item(0)->nodeValue = "INFO";
+  $sonrs->getElementsByTagName('DTSERVER')->item(0)->nodeValue = $system_time;
+  $sonrs->getElementsByTagName('DTPROFUP')->item(0)->nodeValue = $system_time;
+  $sonrs->getElementsByTagName('DTACCTUP')->item(0)->nodeValue = $system_time;
+  $sonrs->getElementsByTagName('LANGUAGE')->item(0)->nodeValue = "ENG";
+  $sonrs->getElementsByTagName('ORG')->item(0)->nodeValue = $org;
+  $sonrs->getElementsByTagName('FID')->item(0)->nodeValue = $org;
+
+  $stmt_trn_rs = $xml->documentElement->getElementsByTagName('STMTTRNRS')->item(0);
+  $stmt_trn_rs->getElementsByTagName('TRNUID')->item(0)->nodeValue = "1";
+  $stmt_trn_rs->getElementsByTagName('CODE')->item(0)->nodeValue = "0";
+  $stmt_trn_rs->getElementsByTagName('SEVERITY')->item(0)->nodeValue = "INFO";
+  $stmt_trn_rs->getElementsByTagName('CURDEF')->item(0)->nodeValue = $currency;
+  $stmt_trn_rs->getElementsByTagName('BANKID')->item(0)->nodeValue = $org;
+  $stmt_trn_rs->getElementsByTagName('ACCTID')->item(0)->nodeValue = $account_id;
+  $stmt_trn_rs->getElementsByTagName('ACCTTYPE')->item(0)->nodeValue = "CHECKING";
+
+  $stmt_trn_rs->getElementsByTagName('BALAMT')->item(0)->nodeValue = $balance;
+  $stmt_trn_rs->getElementsByTagName('BALAMT')->item(1)->nodeValue = $balance;
+
+  $stmt_trn_rs->getElementsByTagName('DTASOF')->item(0)->nodeValue = $balance_time;
+  $stmt_trn_rs->getElementsByTagName('DTASOF')->item(1)->nodeValue = $balance_time;
+
+  return $xml->saveXML($xml->documentElement);
 }
 
 function responseAccountInfo($ofx, $account_list) {
