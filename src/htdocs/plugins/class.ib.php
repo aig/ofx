@@ -44,7 +44,7 @@ class IB
 
     $debug_file = CONFIG::getValue('curl', 'debug.file');
 
-    fopen($fp, $debug_file, 'a+');
+    $fp = fopen($debug_file, 'a+');
 
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
@@ -53,6 +53,7 @@ class IB
     curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie_file);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
     curl_setopt($ch, CURLOPT_STDERR, $fp);
+    curl_setopt($ch, CURLOPT_VERBOSE, true);
     $result = curl_exec($ch);
     curl_close($ch);
 
