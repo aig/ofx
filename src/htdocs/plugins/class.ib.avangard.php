@@ -60,7 +60,15 @@ class IB_AVANGARD extends IB
     return true;
   }
 
-  function getAccountBalance($account_id) {
+  private function getStateToken($page) {
+    if (preg_match('/name="oracle\.adf\.faces\.STATE_TOKEN"\s+value="(\d+)"/', $page, $match)) {
+      return $match[1];
+    }
+
+    return false;
+  }
+
+  public function getAccountBalance($account_id) {
     if (!preg_match('/' . $account_id . '.*?"Детальная информация по счету".*?submitForm\(\'f\'\,1\,\{source:\'(.*?)\'\}\).*?"Выписка по счету"/', $this->_main_page, $action_match)) {
       throw Exception("Unknown bank account: $account_id");
     }
@@ -70,12 +78,14 @@ class IB_AVANGARD extends IB
     $user_agent = Config::getValue('ib.avangard', 'user.agent');
     $cookie_file = Config::getValue('ib.avangard', 'cookie.file');
 
+    $state_token = getStateToken($this->_main_page);
+
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, "https://www.avangard.ru/ibAvn/faces/pages/accounts/all_acc.jspx");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
     curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, "oracle.adf.faces.FORM=f&oracle.adf.faces.STATE_TOKEN=1&source=" . urlencode($source));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, "oracle.adf.faces.FORM=f&oracle.adf.faces.STATE_TOKEN=$state_token&source=" . urlencode($source));
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
     curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie_file);
     curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie_file);
