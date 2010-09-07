@@ -51,9 +51,9 @@ $ib = new IB_AVANGARD();
 if ($ofx->bank_msgs_rq_v1()->isValid()) {
   if ($ofx->bank_msgs_rq_v1()->stmt_trn_rq()->isValid()) {
     $ib->login($user, $fish);
-    $info = $ib->getAccountBalance($ofx->bank_msgs_rq_v1()->stmt_trn_rq()->stmt_rq()->bankacctfrom()->acctid());
+    $info = $ib->getAccountBalance($ofx->bank_msgs_rq_v1()->stmt_trn_rq()->stmt_rq()->bankacctfrom()->acctid(), $ofx->bank_msgs_rq_v1()->stmt_trn_rq()->stmt_rq()->inctran()->dtstart());
     fwrite($fh, print_r($info, true));
-    $response = responseAccountBalance($ofx, $info, $ofx->bank_msgs_rq_v1()->stmt_trn_rq()->stmt_rq()->inctran()->dtstart());
+    $response = responseAccountBalance($ofx, $info);
   }
 } elseif ($ofx->signup_msgs_rq_v1()->isValid()) {
   $ib->login($user, $fish);

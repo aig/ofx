@@ -94,16 +94,16 @@ class IB_AVANGARD extends IB
     if (!preg_match('/' 
                   . $account_id 
                   . '<\/label><\/td><td class="x2p x62"><span style="display:none;">\-?[\d\s]+.\d+<\/span><div><\/div>'
-                  . '<label for="f:leftAccTbl:0:selLeftAcc">\s*(\-?[\d\s]+.\d+)</', $page, $balance_match)) 
+                  . '<label for="f:leftAccTbl:0:selLeftAcc">\s*(\-?[\d\s]+.\d+)</', $page, $match)) 
     {
       return false;
     }
 
     $info = array();
 
-    $info['balance'] = preg_replace("/\s/", '', $balance_match[1]);
+    $info['balance'] = preg_replace("/\s/", '', $match[1]);
 
-    if (!$inctran) {
+    if (empty($inctran)) {
       return $info;
     }
 
@@ -115,38 +115,42 @@ class IB_AVANGARD extends IB
     $start_date = strftime('%d.%m.%Y', strtotime("$inctran" . "000000"));
 
     if (!preg_match('/name="f:finishdate" value="(\d+\.\d+\.\d+)"/', $page, $match)) {
-      return false;
+      return $info;
     }
 
     $finish_date = $match[1];
 
-    if (!preg_match('/submitForm\(\'f\'\,1\,\{source:\'(.*?)\'\}\).*?"Получить"/', $page, $match)) {
-      return false;
+    $regexp = '/' . $account_id . '.*?submitForm\(\\\\\'f\\\\\'\,1\,\{source:\\\\\'(.*?)\\\\\'\}\).*?"Показать"/s';
+
+    if (!preg_match($regexp, $page, $match)) {
+      return $info;
     }
 
     $source = urlencode($match[1]);
 
     $state_token = $this->getStateToken($page);
 
+    $fields = "f%3Astartdate=$start_date&"
+             ."f%3Afinishdate=$finish_date&"
+             ."f%3AleftAccTbl%3Aselected=0&"
+             ."f%3AleftAccTbl%3ArangeStart=0&"
+             ."f%3AleftCardTbl%3A_us=0&"
+             ."f%3AleftCardTbl%3A_us=1&"
+             ."f%3AleftCardTbl%3ArangeStart=0&"
+             ."oracle.adf.faces.FORM=f&oracle.adf.faces.STATE_TOKEN=$state_token&"
+             ."source=$source&"
+             ."event=&"
+             ."f%3AleftCardTbl%3A_sm=";
+
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, "https://www.avangard.ru/ibAvn/faces/pages/accounts/acc_stat.jspx");
     curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, "f%3Astartdate=$start_date&"
-                                        ."f%3Afinishdate=$finish_date&"
-                                        ."f%3AleftAccTbl%3Aselected=0&"
-                                        ."f%3AleftAccTbl%3ArangeStart=0&"
-                                        ."f%3AleftCardTbl%3A_us=0&"
-                                        ."f%3AleftCardTbl%3A_us=1&"
-                                        ."f%3AleftCardTbl%3ArangeStart=0&"
-                                        ."oracle.adf.faces.FORM=f&oracle.adf.faces.STATE_TOKEN=$state_token&"
-                                        ."source=$source&"
-                                        ."event=&"
-                                        ."f%3AleftCardTbl%3A_sm=");
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
     $result = $this->curlExec($ch);
 
     $page  = iconv('cp1251', 'utf-8', html_entity_decode($result, ENT_COMPAT, 'cp1251'));
 
-    $info['trn_list'] = parseTransactionList($page);
+    $info['trn_list'] = $this->parseTransactionList($page);
 
     return $info;
   }
