@@ -78,7 +78,7 @@ class IB_AVANGARD extends IB
     $user_agent = Config::getValue('ib.avangard', 'user.agent');
     $cookie_file = Config::getValue('ib.avangard', 'cookie.file');
 
-    $state_token = getStateToken($this->_main_page);
+    $state_token = $this->getStateToken($this->_main_page);
 
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, "https://www.avangard.ru/ibAvn/faces/pages/accounts/all_acc.jspx");
