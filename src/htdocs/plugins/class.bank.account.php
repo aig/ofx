@@ -29,16 +29,12 @@ class BankAccount
 {
   private $_id;
 
-  private $_currency_id;
-
   public function __construct($account_id) {
     $this->_id = $account_id;
-
-    $this->_currency_id = $match[2];
   }
 
   function id() { return $this->_id; }
 
-  function currency_id() { return $_currency_id; }
+  function currency_id() { return substr($this->account_id, 5, 3); }
 }
 ?>
