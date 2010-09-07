@@ -32,10 +32,6 @@ class BankAccount
   private $_currency_id;
 
   public function __construct($account_id) {
-    if (!preg_match('/^(40817|42307)(\d{3})(\d{12})$/', $account_id, $match)) {
-      throw new Exception("Bank account $account_id is not yet supported");
-    }
-
     $this->_id = $account_id;
 
     $this->_currency_id = $match[2];
