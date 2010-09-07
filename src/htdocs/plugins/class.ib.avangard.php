@@ -70,7 +70,10 @@ class IB_AVANGARD extends IB
   }
 
   public function getAccountBalance($account_id, $inctran = false) {
-    if (!preg_match('/' . $account_id . '.*?"Детальная информация по счету".*?submitForm\(\'f\'\,1\,\{source:\'(.*?)\'\}\).*?"Выписка по счету"/', $this->_main_page, $action_match)) {
+    if (!preg_match('/' 
+                  . $account_id
+                  . '.*?"Детальная информация по счету".*?submitForm\(\'f\'\,1\,\{source:\'(.*?)\'\}\).*?"Выписка по счету"/', $this->_main_page, $action_match)) 
+    {
       throw Exception("Unknown bank account: $account_id");
     }
 
@@ -81,12 +84,18 @@ class IB_AVANGARD extends IB
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, "https://www.avangard.ru/ibAvn/faces/pages/accounts/all_acc.jspx");
     curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, "oracle.adf.faces.FORM=f&oracle.adf.faces.STATE_TOKEN=$state_token&source=" . urlencode($source));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, "oracle.adf.faces.FORM=f&"
+                                        ."oracle.adf.faces.STATE_TOKEN=$state_token&"
+                                        ."source=" . urlencode($source));
     $result = $this->curlExec($ch);
 
     $page  = iconv('cp1251', 'utf-8', html_entity_decode($result, ENT_COMPAT, 'cp1251'));
 
-    if (!preg_match('/' . $account_id . '<\/label><\/td><td class="x2p x62"><span style="display:none;">\-?[\d\s]+.\d+<\/span><div><\/div><label for="f:leftAccTbl:0:selLeftAcc">\s*(\-?[\d\s]+.\d+)</', $page, $balance_match)) {
+    if (!preg_match('/' 
+                  . $account_id 
+                  . '<\/label><\/td><td class="x2p x62"><span style="display:none;">\-?[\d\s]+.\d+<\/span><div><\/div>'
+                  . '<label for="f:leftAccTbl:0:selLeftAcc">\s*(\-?[\d\s]+.\d+)</', $page, $balance_match)) 
+    {
       return false;
     }
 
@@ -98,13 +107,24 @@ class IB_AVANGARD extends IB
       return $info;
     }
 
-    $start_date = strftime('%d.%m.%Y', strtotime("$inctran"));
+    // GnuCash does not set <INCTRAN> INCLUDE field to N, when check balance
+    if ($inctran == '19700101') {
+      return $info;
+    }
+
+    $start_date = strftime('%d.%m.%Y', strtotime("$inctran" . "000000"));
 
     if (!preg_match('/name="f:finishdate" value="(\d+\.\d+\.\d+)"/', $page, $match)) {
       return false;
     }
 
     $finish_date = $match[1];
+
+    if (!preg_match('/submitForm\(\'f\'\,1\,\{source:\'(.*?)\'\}\).*?"Получить"/', $page, $match)) {
+      return false;
+    }
+
+    $source = urlencode($match[1]);
 
     $state_token = $this->getStateToken($page);
 
@@ -119,14 +139,43 @@ class IB_AVANGARD extends IB
                                         ."f%3AleftCardTbl%3A_us=1&"
                                         ."f%3AleftCardTbl%3ArangeStart=0&"
                                         ."oracle.adf.faces.FORM=f&oracle.adf.faces.STATE_TOKEN=$state_token&"
-                                        ."source=f%3A_id202&"
+                                        ."source=$source&"
                                         ."event=&"
                                         ."f%3AleftCardTbl%3A_sm=");
     $result = $this->curlExec($ch);
 
     $page  = iconv('cp1251', 'utf-8', html_entity_decode($result, ENT_COMPAT, 'cp1251'));
 
+    $info['trn_list'] = parseTransactionList($page);
+
     return $info;
+  }
+
+  private function parseTransactionList($page) {
+    $transaction_list = array();
+
+    if (!preg_match('/ПРОВЕДЕННЫЕ ПО КАРТСЧЕТУ ОПЕРАЦИИ(.*?)Исходящий остаток средств на картсчете/s', $page, $match)) {
+      return $transaction_list;
+    }
+
+    // $1: date, $2: ammount, $3: tr_datetime, $4: tr_card, $5: tr_ammount, $6: currency, $7: tr_description
+    $regexp = '/(\d{2}\.\d{2}\.\d{4}).*?([\d ]+\.\d+).*?Покупка.*?(\d{2}\.\d{2}\.\d{4}\s\d{2}:\d{2}:\d{2}).*?Карта.*?\*(\d{4})\..*?Сумма.*?([\d ]+\.\d+).*?>(...)\..*?>Место\s([^<]+)/s';
+
+    if (preg_match_all($regexp, $match[1], $matches)) {
+      for ($i = 0; $i < count($matches[0]); $i++) {
+        $transaction = array();
+        $transaction['trntype'] = 'POS';
+        $transaction['dtposted'] = $matches[1][$i];
+        $transaction['trnamt'] = $matches[2][$i];
+        $transaction['fitid'] = md5($matches[1][$i].$matches[2][$i].$matches[3][$i].$matches[4][$i].$matches[6][$i].$matches[7][$i]);
+        $transaction['dtuser'] = $matches[3][$i];
+        $transaction['origcurrency'] = $matches[6][$i];
+        $transaction['name'] = $matches[7][$i];
+        $transaction_list[] = $transaction;
+      }
+    }
+
+    return $transaction_list;
   }
 
   function getAccountList() {
