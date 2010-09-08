@@ -162,15 +162,19 @@ class IB_AVANGARD extends IB
       return $transaction_list;
     }
 
-    // $1: date, $2: ammount, $3: tr_datetime, $4: tr_card, $5: tr_ammount, $6: currency, $7: tr_description
+    // $1: date, $2: ammount, $3: tr_datetime, $4: tr_card, $5: tr_amount, $6: currency, $7: tr_description
     $regexp = '/(\d{2}\.\d{2}\.\d{4}).*?([\d ]+\.\d+).*?Покупка.*?(\d{2}\.\d{2}\.\d{4}\s\d{2}:\d{2}:\d{2}).*?Карта.*?\*(\d{4})\..*?Сумма.*?([\d ]+\.\d+).*?>(...)\..*?>Место\s([^<]+)/s';
 
     if (preg_match_all($regexp, $match[1], $matches)) {
       for ($i = 0; $i < count($matches[0]); $i++) {
         $transaction = array();
         $transaction['trntype'] = 'POS';
-        $transaction['dtposted'] = $matches[1][$i];
-        $transaction['trnamt'] = $matches[2][$i];
+        $transaction['dtposted'] = substr($matches[1][$i], 6, 4) 
+                                 . substr($matches[1][$i], 3, 2) 
+                                 . substr($matches[1][$i], 0, 2);
+        $transaction['trnamt'] = '-' . preg_replace('/\s/', '', $matches[2][$i]);
+    	$transaction['card'] = $matches[4][$i];
+    	$transaction['orgamount'] = preg_replace('/\s/', '', $matches[5][$i]);
         $transaction['fitid'] = md5($matches[1][$i].$matches[2][$i].$matches[3][$i].$matches[4][$i].$matches[6][$i].$matches[7][$i]);
         $transaction['dtuser'] = $matches[3][$i];
         $transaction['origcurrency'] = $matches[6][$i];

@@ -108,6 +108,27 @@ function responseAccountBalance($ofx, $info) {
   $stmt_trn_rs->getElementsByTagName('DTASOF')->item(0)->nodeValue = $balance_time;
   $stmt_trn_rs->getElementsByTagName('DTASOF')->item(1)->nodeValue = $balance_time;
 
+  $stmt_rs = $stmt_trn_rs->getElementsByTagName('STMTRS')->item(0);
+  
+  $bank_tran_list = $xml->createElement('BANKTRANLIST');
+  
+  $bank_tran_list->appendChild(new DOMElement('DTSTART', '20100908'));
+  $bank_tran_list->appendChild(new DOMElement('DTEND', '20100908'));
+
+  foreach ($info['trn_list'] as $trn) {
+    $stmt_trn = $xml->createElement('STMTTRN');
+    $stmt_trn->appendChild(new DOMElement('TRNTYPE', $trn['trntype']));
+    $stmt_trn->appendChild(new DOMElement('TRNTYPE', $trn['trntype']));
+    $stmt_trn->appendChild(new DOMElement('DTPOSTED', $trn['dtposted']));
+    $stmt_trn->appendChild(new DOMElement('TRNAMT', $trn['trnamt']));
+    $stmt_trn->appendChild(new DOMElement('FITID', $trn['fitid']));
+    $stmt_trn->appendChild(new DOMElement('NAME', $trn['name']));
+    $stmt_trn->appendChild(new DOMElement('MEMO', $trn['card']));
+    $bank_tran_list->appendChild($stmt_trn);
+  }
+
+  $stmt_rs->appendChild($bank_tran_list);
+  
   return $xml->saveXML($xml->documentElement);
 }
 
