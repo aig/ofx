@@ -123,7 +123,7 @@ function responseAccountBalance($ofx, $info) {
     $stmt_trn->appendChild(new DOMElement('TRNAMT', $trn['trnamt']));
     $stmt_trn->appendChild(new DOMElement('FITID', $trn['fitid']));
     $stmt_trn->appendChild(new DOMElement('NAME', $trn['name']));
-    $stmt_trn->appendChild(new DOMElement('MEMO', $trn['card']));
+    $stmt_trn->appendChild(new DOMElement('MEMO', '*' . $trn['card'] . ' ' . $trn['dtuser']));
     $bank_tran_list->appendChild($stmt_trn);
   }
 
