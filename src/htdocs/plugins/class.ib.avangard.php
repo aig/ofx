@@ -163,7 +163,7 @@ class IB_AVANGARD extends IB
     }
 
     // $1: date, $2: ammount, $3: tr_datetime, $4: tr_card, $5: tr_amount, $6: currency, $7: tr_description
-    $regexp = '/(\d{2}\.\d{2}\.\d{4})s*<\/td>\s*<td[^>]+>\s*<\/td>.*?([\d ]+\.\d+).*?Покупка.*?(\d{2}\.\d{2}\.\d{4}\s\d{2}:\d{2}:\d{2}).*?Карта.*?\*(\d{4})\..*?Сумма.*?([\d ]+\.\d+).*?>(...)\..*?>Место\s([^<]+)/s';
+    $regexp = '/(\d{2}\.\d{2}\.\d{4})\s*<\/td>\s*<td[^>]+>\s*<\/td>.*?([\d ]+\.\d+).*?Покупка.*?(\d{2}\.\d{2}\.\d{4}\s\d{2}:\d{2}:\d{2}).*?Карта.*?\*(\d{4})\..*?Сумма.*?([\d ]+\.\d+).*?>(...)\..*?>Место\s([^<]+)/s';
 
     if (preg_match_all($regexp, $match[1], $matches)) {
       for ($i = 0; $i < count($matches[0]); $i++) {
