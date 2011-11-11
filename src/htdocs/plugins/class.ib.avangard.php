@@ -52,7 +52,7 @@ class IB_AVANGARD extends IB
 
     $this->_account_list = array();
     
-    if (preg_match_all('/>((?:40817|42307)\d{3}\d{12})/', $this->_main_page, $matches)) {
+    if (preg_match_all('/>((?:40817|42307|42306)\d{3}\d{12})/', $this->_main_page, $matches)) {
       foreach ($matches[1] as $account_id) {
         $this->_account_list[] = new BankAccount($account_id);
       }
