@@ -30,15 +30,20 @@ class IB_RSB extends IB {
 
     public function __construct() {
         parent::__construct("rsb");
-        $this -> _account_list = null;
+        $this->_account_list = null;
     }
 
     public function login($user, $fish) {
+        // try to log in.
+        $result = $this->curlLogin($user, $fish);
 
+        if (!$result) return false;
+
+        return true;
     }
 
     public function getAccountList() {
-        return $this -> _account_list;
+        return $this->_account_list;
     }
 
     public function getAccountBalance($account_id, $inctran = false) {
@@ -48,5 +53,21 @@ class IB_RSB extends IB {
         return $info;
     }
 
+    private function curlLogin($user, $fish) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, "https://online.rsb.ru/hb/faces/system/rslogin.jsp");
+        $result = $this->curlExec($ch);
+        
+        $password = decryptPassword($user, CONFIG::getValue('ib.rsb', 'user.password'), $fish);
+    
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, "https://online.rsb.ru/hb/faces/security_check");
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, "j_password={$password}&j_username={$user}&systemid=hb");
+    
+        $result = $this->curlExec($ch);
+
+        return $result;
+    }
 }
 ?>
