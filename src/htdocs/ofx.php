@@ -47,6 +47,7 @@ $user = $ofx->signon_msgs_rq_v1()->son_rq()->userid();
 $fish = $ofx->signon_msgs_rq_v1()->son_rq()->userpass();
 
 $ib = new IB_AVANGARD();
+// $ib = new IB_RSB();
 
 if ($ofx->bank_msgs_rq_v1()->isValid()) {
   if ($ofx->bank_msgs_rq_v1()->stmt_trn_rq()->isValid()) {

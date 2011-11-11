@@ -26,6 +26,7 @@
  */
 
 require_once('class.ib.avangard.php');
+require_once('class.ib.rsb.php');
 require_once('class.bank.account.php');
 
 class IB
