@@ -74,7 +74,7 @@ class IB_AVANGARD extends IB
                   . $account_id
                   . '.*?"Детальная информация по счету".*?submitForm\(\'f\'\,1\,\{source:\'(.*?)\'\}\).*?"Выписка по счету"/', $this->_main_page, $action_match)) 
     {
-      throw Exception("Unknown bank account: $account_id");
+      throw new Exception("Unknown bank account: $account_id");
     }
 
     $source = $action_match[1];
