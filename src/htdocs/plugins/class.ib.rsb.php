@@ -39,7 +39,62 @@ class IB_RSB extends IB {
 
         if (!$result) return false;
 
+        if (!preg_match('/submitForm\(\'mainform\'\,1\,\{source:\'([^\']+)\'\}\)[^>]+>' . mb_convert_encoding('реквизиты счетов', 'HTML-ENTITIES', 'UTF-8') . '/', $result, $match)) {
+            return false;
+        }
+
+        $source = $match[1];
+
+        $state_token = $this->getStateToken($result);
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, "https://online.rsb.ru/hb/faces/rs/RSIndex.jspx");
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, "oracle.adf.faces.FORM=mainform&oracle.adf.faces.STATE_TOKEN={$state_token}&source=" . urlencode($source));
+
+        $result = $this->curlExec($ch);
+
+        if (!preg_match('/submitForm\(\'mainform\'\,1\,\{source:\'([^\']+)\'\}\)[^>]+>' . mb_convert_encoding('Пополняемые счета', 'HTML-ENTITIES', 'UTF-8') . '/', $result, $match)) {
+            return false;
+        }
+
+        $source = $match[1];
+
+        $state_token = $this->getStateToken($result);
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, "https://online.rsb.ru/hb/faces/rs/RSIndex.jspx");
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, "oracle.adf.faces.FORM=mainform&oracle.adf.faces.STATE_TOKEN={$state_token}&source=" . urlencode($source));
+
+        $result = $this->curlExec($ch);
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, "https://online.rsb.ru/hb/ReportServlet");
+
+        $result = $this->curlExec($ch);
+
+        $this->_account_list = array();
+
+        if (preg_match_all('/>((?:40817|42307|42306)\d{3}\d{12})/', $result, $matches)) {
+            foreach ($matches[1] as $account_id) {
+            $this->_account_list[] = new BankAccount($account_id);
+          }
+        }
+
         return true;
+    }
+
+    private function getStateToken($page) {
+        if (preg_match('/value="(\d+)"\s+name="oracle\.adf\.faces\.STATE_TOKEN"/', $page, $match)) {
+            return $match[1];
+        }
+
+        if (preg_match('/name="oracle\.adf\.faces\.STATE_TOKEN"\s+value="(\d+)"/', $page, $match)) {
+            return $match[1];
+        }
+
+        return false;
     }
 
     public function getAccountList() {
@@ -57,14 +112,14 @@ class IB_RSB extends IB {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, "https://online.rsb.ru/hb/faces/system/rslogin.jsp");
         $result = $this->curlExec($ch);
-        
+
         $password = decryptPassword($user, CONFIG::getValue('ib.rsb', 'user.password'), $fish);
-    
+
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, "https://online.rsb.ru/hb/faces/security_check");
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, "j_password={$password}&j_username={$user}&systemid=hb");
-    
+
         $result = $this->curlExec($ch);
 
         return $result;
